@@ -46,11 +46,11 @@
 - [x] SAST: bandit/semgrep; dependency CVE scan; SBOM generation; NOTICE file
 - [x] Enforce pre-commit hooks; ruff/mypy for backend; eslint/prettier/tsconfig strict for frontend
 
-## Phase 6: Documentation
-- [ ] README.md with badges (CI, coverage), architecture diagram (Mermaid)
-- [ ] DEPLOYMENT_GUIDE.md, API reference (OpenAPI), CHANGELOG.md, CONTRIBUTING.md
-- [ ] SECURITY.md, NOTICE, SBOM generation docs
-- [ ] Add architecture decisions and diagrams in docs/
+## Phase 6: Documentation ✅
+- [x] README.md with badges (CI, coverage), architecture diagram (Mermaid)
+- [x] DEPLOYMENT_GUIDE.md, API reference (OpenAPI), CHANGELOG.md, CONTRIBUTING.md
+- [x] SECURITY.md, NOTICE, SBOM generation docs
+- [x] Add architecture decisions and diagrams in docs/
 
 ## Phase 7: Observability and NFRs
 - [ ] Ensure TTFB < 200 ms for 95% in test env
@@ -76,9 +76,9 @@
 
 ## Progress Tracking
 - Total Tasks: 45
-- Completed: 32
-- Remaining: 13
-- Progress: 71%
+- Completed: 36
+- Remaining: 9
+- Progress: 80%
 
 ## Notes
 - Execute tasks in order
