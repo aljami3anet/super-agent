@@ -52,11 +52,11 @@
 - [x] SECURITY.md, NOTICE, SBOM generation docs
 - [x] Add architecture decisions and diagrams in docs/
 
-## Phase 7: Observability and NFRs
-- [ ] Ensure TTFB < 200 ms for 95% in test env
-- [ ] Implement rate limiting, graceful shutdown
-- [ ] Export metrics, logs, traces to OTLP; include Grafana dashboard JSON
-- [ ] GDPR delete endpoint behavior and tests
+## Phase 7: Observability and NFRs ✅
+- [x] Ensure TTFB < 200 ms for 95% in test env
+- [x] Implement rate limiting, graceful shutdown
+- [x] Export metrics, logs, traces to OTLP; include Grafana dashboard JSON
+- [x] GDPR delete endpoint behavior and tests
 
 ## Phase 8: DevEx and Scripts
 - [ ] scripts/ for dev, test, lint, format, build, release
@@ -76,9 +76,9 @@
 
 ## Progress Tracking
 - Total Tasks: 45
-- Completed: 36
-- Remaining: 9
-- Progress: 80%
+- Completed: 40
+- Remaining: 5
+- Progress: 89%
 
 ## Notes
 - Execute tasks in order

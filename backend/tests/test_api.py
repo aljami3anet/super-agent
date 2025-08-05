@@ -440,3 +440,38 @@ class TestAuthentication:
         )
         
         assert response.status_code == 200
+
+
+class TestGDPRDelete:
+    def test_gdpr_delete_success(self, client):
+        response = client.delete(
+            "/gdpr/delete",
+            json={"user_id": "test-user", "delete_conversations": True, "delete_logs": True, "delete_memory": True}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "deleted"
+        assert data["user_id"] == "test-user"
+        assert data["deleted"]["conversations"] is True
+        assert data["deleted"]["logs"] is True
+        assert data["deleted"]["memory"] is True
+
+    def test_gdpr_delete_partial(self, client):
+        response = client.delete(
+            "/gdpr/delete",
+            json={"user_id": "test-user", "delete_conversations": False, "delete_logs": True, "delete_memory": False}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["deleted"]["conversations"] is False
+        assert data["deleted"]["logs"] is True
+        assert data["deleted"]["memory"] is False
+
+    def test_gdpr_delete_missing_user_id(self, client):
+        response = client.delete(
+            "/gdpr/delete",
+            json={"delete_conversations": True}
+        )
+        assert response.status_code == 422
+        data = response.json()
+        assert "detail" in data

@@ -38,6 +38,7 @@ from .config import settings
 from .api import router as api_router
 from .services.health import HealthService
 from .services.logging import setup_logging
+from autodev_agent.api.middleware import register_rate_limiting, register_graceful_shutdown
 
 # Setup logging
 setup_logging()
@@ -111,19 +112,20 @@ def create_app() -> FastAPI:
     
     # Create FastAPI app
     app = FastAPI(
-        title=settings.APP_NAME,
-        version=settings.APP_VERSION,
-        description="AI Coder Agent - Autonomous AI coding system with multi-agent orchestration",
-        docs_url="/docs" if settings.DEBUG else None,
-        redoc_url="/redoc" if settings.DEBUG else None,
-        openapi_url="/openapi.json" if settings.DEBUG else None,
-        lifespan=lifespan,
+        title="AI Coder Agent API",
+        version="0.1.0",
+        description="Multi-agent AI Coder System API",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
     )
     
     # Add rate limiting
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_middleware(SlowAPIMiddleware)
+    register_rate_limiting(app)
+    register_graceful_shutdown(app)
     
     # Add CORS middleware
     app.add_middleware(
