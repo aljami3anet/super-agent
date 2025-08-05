@@ -32,12 +32,12 @@
 - [x] Accessibility (WCAG 2.2 AA), responsive design
 
 ## Phase 4: Agent Workflow and Orchestration
-- [ ] Implement Single-Turn Micro-Survey API and UI (collect preferences and lock)
-- [ ] Autonomous build: updating TODO.md and SUMMARY.md continuously
-- [ ] Git integration: granular commits; branch, merge operations
-- [ ] Streaming concise status updates from backend to frontend (websocket/SSE)
-- [ ] Implement planner → coder → critic → tester → summarizer loops with retries and fallbacks
-- [ ] Implement budget/cost tracking and switching models based on constraints
+- [x] Implement Single-Turn Micro-Survey API and UI (collect preferences and lock)
+- [x] Autonomous build: updating TODO.md and SUMMARY.md continuously
+- [x] Git integration: granular commits; branch, merge operations
+- [x] Streaming concise status updates from backend to frontend (websocket/SSE)
+- [x] Implement planner → coder → critic → tester → summarizer loops with retries and fallbacks
+- [x] Implement budget/cost tracking and switching models based on constraints
 
 ## Phase 5: Testing and Quality Gates
 - [ ] Backend: Pytest + Coverage; configure ≥95% coverage threshold
@@ -76,9 +76,9 @@
 
 ## Progress Tracking
 - Total Tasks: 45
-- Completed: 21
-- Remaining: 24
-- Progress: 47%
+- Completed: 27
+- Remaining: 18
+- Progress: 60%
 
 ## Notes
 - Execute tasks in order
