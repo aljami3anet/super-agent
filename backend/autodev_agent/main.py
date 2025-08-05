@@ -1,5 +1,5 @@
 """
-AI Coder Agent - Main FastAPI Application
+AI Coder Agent - Main FastAPI Application.
 
 This module provides the main FastAPI application with:
 - Health check endpoints
@@ -231,7 +231,7 @@ def main():
             "access_log": True,
         }
         
-        # Start server
+        # Start the server
         uvicorn.run(**uvicorn_config)
         
     except KeyboardInterrupt:
