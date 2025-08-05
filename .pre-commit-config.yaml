@@ -1,0 +1,301 @@
+repos:
+  # Python hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: check-json
+      - id: check-toml
+      - id: debug-statements
+      - id: name-tests-test
+      - id: requirements-txt-fixer
+      - id: fix-byte-order-marker
+
+  # Python formatting and linting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports]
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-r, backend/autodev_agent]
+
+  # JavaScript/TypeScript hooks
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.56.0
+    hooks:
+      - id: eslint
+        files: \.(js|ts|tsx)$
+        types: [file]
+        additional_dependencies:
+          - eslint@8.56.0
+          - '@typescript-eslint/eslint-plugin@6.14.0'
+          - '@typescript-eslint/parser@6.14.0'
+          - eslint-plugin-react@7.33.2
+          - eslint-plugin-react-hooks@4.6.0
+          - eslint-plugin-react-refresh@0.4.5
+
+  # Prettier for frontend
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.1
+    hooks:
+      - id: prettier
+        types_or: [javascript, jsx, ts, tsx, json, css, scss, html, md, yaml]
+        files: ^frontend/
+
+  # Git hooks
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: v5.13.2
+    hooks:
+      - id: isort
+        args: [--profile, black]
+
+  # Commit message validation
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  # Docker hooks
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: [--ignore, DL3008, --ignore, DL3009]
+
+  # YAML validation
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.33.0
+    hooks:
+      - id: yamllint
+        args: [--format, parsable, --strict]
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.37.0
+    hooks:
+      - id: markdownlint
+        args: [--fix]
+
+  # Shell script linting
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.9.0
+    hooks:
+      - id: shellcheck
+        args: [--severity=warning]
+
+  # Terraform (if used)
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.88.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_validate
+      - id: terraform_docs
+      - id: terraform_tflint
+      - id: terraform_checkov
+
+  # License headers
+  - repo: https://github.com/apache/skywalking-eyes
+    rev: main
+    hooks:
+      - id: header
+
+  # Spell checking
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.16.4
+    hooks:
+      - id: typos
+
+  # Dependency updates
+  - repo: https://github.com/pre-commit/mirrors-pip-tools
+    rev: v7.3.0
+    hooks:
+      - id: pip-compile
+        args: [--upgrade]
+        files: ^backend/requirements.*\.txt$
+
+  # NPM audit
+  - repo: local
+    hooks:
+      - id: npm-audit
+        name: npm audit
+        entry: npm audit --audit-level=moderate
+        language: system
+        pass_filenames: false
+        files: ^frontend/package\.json$
+
+  # Test coverage check
+  - repo: local
+    hooks:
+      - id: test-coverage
+        name: Test Coverage
+        entry: |
+          cd backend && pytest --cov=autodev_agent --cov-fail-under=95 --cov-report=term-missing
+          cd ../frontend && npm run test:coverage
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # Build check
+  - repo: local
+    hooks:
+      - id: build-check
+        name: Build Check
+        entry: |
+          cd backend && python -m build
+          cd ../frontend && npm run build
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # Docker build check
+  - repo: local
+    hooks:
+      - id: docker-build
+        name: Docker Build Check
+        entry: docker build -t ai-coder-agent:pre-commit .
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # Security scan
+  - repo: local
+    hooks:
+      - id: security-scan
+        name: Security Scan
+        entry: |
+          cd backend && bandit -r autodev_agent/ -f json -o bandit-report.json || true
+          cd ../frontend && npm audit --audit-level=moderate || true
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # Documentation check
+  - repo: local
+    hooks:
+      - id: docs-check
+        name: Documentation Check
+        entry: |
+          # Check if README.md exists and has content
+          if [ ! -s README.md ]; then
+            echo "README.md is missing or empty"
+            exit 1
+          fi
+          
+          # Check if CHANGELOG.md exists
+          if [ ! -f CHANGELOG.md ]; then
+            echo "CHANGELOG.md is missing"
+            exit 1
+          fi
+          
+          # Check if LICENSE exists
+          if [ ! -f LICENSE ]; then
+            echo "LICENSE is missing"
+            exit 1
+          fi
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # Git hooks for commit message
+  - repo: local
+    hooks:
+      - id: commit-msg
+        name: Commit Message Check
+        entry: |
+          # Check commit message format
+          commit_msg=$(cat $1)
+          
+          # Check for conventional commit format
+          if ! echo "$commit_msg" | grep -qE "^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+"; then
+            echo "Commit message must follow conventional commit format:"
+            echo "type(scope): description"
+            echo "Examples:"
+            echo "  feat: add new feature"
+            echo "  fix(auth): resolve login issue"
+            echo "  docs: update README"
+            exit 1
+          fi
+          
+          # Check message length
+          if [ ${#commit_msg} -gt 72 ]; then
+            echo "Commit message is too long (max 72 characters)"
+            exit 1
+          fi
+        language: system
+        stages: [commit-msg]
+        pass_filenames: false
+
+  # Branch protection
+  - repo: local
+    hooks:
+      - id: branch-protection
+        name: Branch Protection
+        entry: |
+          # Prevent direct commits to main branch
+          current_branch=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$current_branch" = "main" ]; then
+            echo "Direct commits to main branch are not allowed"
+            echo "Please create a pull request instead"
+            exit 1
+          fi
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # File size check
+  - repo: local
+    hooks:
+      - id: file-size-check
+        name: File Size Check
+        entry: |
+          # Check for large files (>10MB)
+          large_files=$(find . -type f -size +10M -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./venv/*")
+          if [ ! -z "$large_files" ]; then
+            echo "Large files detected (>10MB):"
+            echo "$large_files"
+            echo "Consider using Git LFS for large files"
+            exit 1
+          fi
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # Dependency license check
+  - repo: local
+    hooks:
+      - id: license-check
+        name: License Check
+        entry: |
+          # Check if all dependencies have compatible licenses
+          cd backend
+          pip install pip-licenses
+          pip-licenses --format=markdown --output-file=licenses.md || true
+          
+          cd ../frontend
+          npm install -g license-checker
+          license-checker --summary --onlyAllow "MIT;ISC;Apache-2.0;BSD-2-Clause;BSD-3-Clause" || true
+        language: system
+        pass_filenames: false
+        always_run: true

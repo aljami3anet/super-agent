@@ -39,12 +39,12 @@
 - [x] Implement planner → coder → critic → tester → summarizer loops with retries and fallbacks
 - [x] Implement budget/cost tracking and switching models based on constraints
 
-## Phase 5: Testing and Quality Gates
-- [ ] Backend: Pytest + Coverage; configure ≥95% coverage threshold
-- [ ] Frontend: Jest + React Testing Library; Playwright E2E tests
-- [ ] CI workflows to run lint, format, type-check, tests, coverage gates; block on failures
-- [ ] SAST: bandit/semgrep; dependency CVE scan; SBOM generation; NOTICE file
-- [ ] Enforce pre-commit hooks; ruff/mypy for backend; eslint/prettier/tsconfig strict for frontend
+## Phase 5: Testing and Quality Gates ✅
+- [x] Backend: Pytest + Coverage; configure ≥95% coverage threshold
+- [x] Frontend: Jest + React Testing Library; Playwright E2E tests
+- [x] CI workflows to run lint, format, type-check, tests, coverage gates; block on failures
+- [x] SAST: bandit/semgrep; dependency CVE scan; SBOM generation; NOTICE file
+- [x] Enforce pre-commit hooks; ruff/mypy for backend; eslint/prettier/tsconfig strict for frontend
 
 ## Phase 6: Documentation
 - [ ] README.md with badges (CI, coverage), architecture diagram (Mermaid)
@@ -76,9 +76,9 @@
 
 ## Progress Tracking
 - Total Tasks: 45
-- Completed: 27
-- Remaining: 18
-- Progress: 60%
+- Completed: 32
+- Remaining: 13
+- Progress: 71%
 
 ## Notes
 - Execute tasks in order

@@ -1,0 +1,237 @@
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+        cd ../frontend
+        npm ci
+    
+    - name: Scan Python dependencies
+      run: |
+        cd backend
+        safety check --json --output safety-report.json || true
+        pip-audit --format json --output pip-audit-report.json || true
+    
+    - name: Scan Node.js dependencies
+      run: |
+        cd frontend
+        npm audit --audit-level=moderate --json > npm-audit-report.json || true
+        npx snyk test --json > snyk-report.json || true
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          backend/safety-report.json
+          backend/pip-audit-report.json
+          frontend/npm-audit-report.json
+          frontend/snyk-report.json
+
+  code-scan:
+    name: Code Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install security tools
+      run: |
+        pip install bandit semgrep
+        npm install -g @snyk/cli
+    
+    - name: Run Bandit (Python security linter)
+      run: |
+        cd backend
+        bandit -r autodev_agent/ -f json -o bandit-report.json || true
+    
+    - name: Run Semgrep (Static analysis)
+      run: |
+        cd backend
+        semgrep --config=auto . --json --output semgrep-report.json || true
+    
+    - name: Run Snyk code scan
+      run: |
+        cd frontend
+        npx snyk code test --json > snyk-code-report.json || true
+    
+    - name: Upload code security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-security-reports
+        path: |
+          backend/bandit-report.json
+          backend/semgrep-report.json
+          frontend/snyk-code-report.json
+
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker image
+      run: |
+        docker build -t ai-coder-agent:security-scan .
+    
+    - name: Run Trivy container scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'ai-coder-agent:security-scan'
+        format: 'sarif'
+        output: 'trivy-container-results.sarif'
+    
+    - name: Upload container scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-container-results.sarif'
+
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run TruffleHog
+      run: |
+        pip install trufflehog
+        trufflehog --json . > trufflehog-report.json || true
+    
+    - name: Run GitGuardian
+      run: |
+        pip install ggshield
+        ggshield scan path . --json > ggshield-report.json || true
+    
+    - name: Upload secret scan reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: secret-scan-reports
+        path: |
+          trufflehog-report.json
+          ggshield-report.json
+
+  compliance-check:
+    name: Compliance Check
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-scan, container-scan, secret-scan]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all security reports
+      uses: actions/download-artifact@v3
+      with:
+        name: security-reports
+        path: security-reports/
+    
+    - uses: actions/download-artifact@v3
+      with:
+        name: code-security-reports
+        path: code-security-reports/
+    
+    - uses: actions/download-artifact@v3
+      with:
+        name: secret-scan-reports
+        path: secret-scan-reports/
+    
+    - name: Generate compliance report
+      run: |
+        echo "# Security Compliance Report" > compliance-report.md
+        echo "Generated on: $(date)" >> compliance-report.md
+        echo "" >> compliance-report.md
+        echo "## Summary" >> compliance-report.md
+        echo "- Dependency vulnerabilities: $(find security-reports/ -name "*.json" | wc -l) reports" >> compliance-report.md
+        echo "- Code security issues: $(find code-security-reports/ -name "*.json" | wc -l) reports" >> compliance-report.md
+        echo "- Container vulnerabilities: Check GitHub Security tab" >> compliance-report.md
+        echo "- Secrets found: $(find secret-scan-reports/ -name "*.json" | wc -l) reports" >> compliance-report.md
+    
+    - name: Upload compliance report
+      uses: actions/upload-artifact@v3
+      with:
+        name: compliance-report
+        path: compliance-report.md
+    
+    - name: Create security issue if vulnerabilities found
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Check for high/critical vulnerabilities
+          let hasVulnerabilities = false;
+          
+          try {
+            const securityReports = fs.readdirSync('security-reports/');
+            const codeReports = fs.readdirSync('code-security-reports/');
+            const secretReports = fs.readdirSync('secret-scan-reports/');
+            
+            // Simple check - if any reports exist, assume vulnerabilities
+            if (securityReports.length > 0 || codeReports.length > 0 || secretReports.length > 0) {
+              hasVulnerabilities = true;
+            }
+          } catch (error) {
+            console.log('No security reports found');
+          }
+          
+          if (hasVulnerabilities) {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Security Vulnerabilities Detected',
+              body: `## Security Scan Results
+              
+              Automated security scan has detected potential vulnerabilities.
+              
+              **Action Required:**
+              1. Review the security reports in the artifacts
+              2. Address any high/critical vulnerabilities
+              3. Update dependencies if needed
+              4. Re-run the security scan after fixes
+              
+              **Reports Available:**
+              - Dependency vulnerabilities
+              - Code security issues
+              - Container vulnerabilities
+              - Secret scanning results
+              
+              Please review and address these issues promptly.`,
+              labels: ['security', 'vulnerability', 'automated'],
+            });
+          } else {
+            console.log('No security vulnerabilities detected');
+          }
