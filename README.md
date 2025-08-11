@@ -74,7 +74,7 @@ graph TB
 
 1. **Clone the repository**
    ```bash
-   git clone [https://github.com/ai-coder-agent/ai-coder-agent.git](https://github.com/aljami3anet/super-agent.git)
+   git clone https://github.com/aljami3anet/super-agent.git
    cd ai-coder-agent
    ```
 
