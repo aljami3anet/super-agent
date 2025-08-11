@@ -317,6 +317,6 @@ This project is complete and ready for production deployment. All planned featur
 
 **Built with ❤️ by the AI Coder Agent Team**
 
-[![GitHub stars](https://img.shields.io/github/stars/ai-coder-agent/ai-coder-agent?style=social)](https://github.com/ai-coder-agent/ai-coder-agent)
-[![GitHub forks](https://img.shields.io/github/forks/ai-coder-agent/ai-coder-agent?style=social)](https://github.com/ai-coder-agent/ai-coder-agent)
+[![GitHub stars](https://img.shields.io/github/stars/aljami3anet/super-agent?style=social)]([https://github.com/aljami3anet/super-agent](https://github.com/aljami3anet/super-agent)
+[![GitHub forks](https://img.shields.io/github/forks/aljami3anet/super-agent?style=social)]([https://github.com/aljami3anet/super-agent](https://github.com/aljami3anet/super-agent))
 ```
