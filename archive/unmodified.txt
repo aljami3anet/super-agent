@@ -1,0 +1,15 @@
+  - CHANGELOG.md
+  - CODEASE_UPDATE_by_GLM-4.5.txt
+  - LICENSE
+  - README.md
+  - SUMMARY.md
+  - backend\autodev_agent\__init__.py
+  - backend\autodev_agent\agents\base.py
+  - backend\autodev_agent\agents\coder.py
+  - backend\autodev_agent\main.py
+  - backend\requirements-dev.txt
+  - backend\requirements.txt
+  - code_base_latest_snapshot.txt
+  - docker-compose.yml
+  - docs\
+  - docs\README.md
