@@ -1,27 +1,19 @@
 """
-API module for AI Coder Agent.
+API module for the AI Coder Agent.
 
-This module provides the FastAPI router with all API endpoints including:
-- Agent endpoints
-- Tool endpoints
-- Conversation endpoints
-- Configuration endpoints
+This module provides the API router and endpoint definitions
+for the AI Coder Agent application.
 """
 
 from fastapi import APIRouter
 
-from .agents import router as agents_router
-from .tools import router as tools_router
-from .conversations import router as conversations_router
-from .config import router as config_router
+from . import agents, config, conversations, tools
 
-# Create main API router
+# Create API router
 router = APIRouter()
 
 # Include sub-routers
-router.include_router(agents_router, prefix="/agents", tags=["agents"])
-router.include_router(tools_router, prefix="/tools", tags=["tools"])
-router.include_router(conversations_router, prefix="/conversations", tags=["conversations"])
-router.include_router(config_router, prefix="/config", tags=["config"])
-
-__all__ = ["router"]
+router.include_router(agents.router, prefix="/agents", tags=["agents"])
+router.include_router(config.router, prefix="/config", tags=["config"])
+router.include_router(conversations.router, prefix="/conversations", tags=["conversations"])
+router.include_router(tools.router, prefix="/tools", tags=["tools"])

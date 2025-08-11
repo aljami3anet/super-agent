@@ -1,14 +1,10 @@
 """
-Services module for AI Coder Agent.
+Services module for the AI Coder Agent.
 
-This module provides various services including:
-- Health monitoring
-- Logging configuration
-- Database services
-- Agent orchestration
+This module provides service implementations for the AI Coder Agent application.
 """
 
 from .health import HealthService
-from .logging import setup_logging
+from .logging import get_logger, setup_logging
 
-__all__ = ["HealthService", "setup_logging"]
+__all__ = ["HealthService", "get_logger", "setup_logging"]

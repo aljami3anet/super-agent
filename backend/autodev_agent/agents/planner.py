@@ -1,10 +1,9 @@
 """
 Planner Agent
 
-Responsible for breaking down complex tasks into actionable steps and creating execution strategies.
+Responsible for planning and organizing tasks to be completed by other agents.
 """
 
-import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -12,35 +11,37 @@ from .base import BaseAgent, AgentRequest, AgentResult, AgentType
 
 
 class PlannerAgent(BaseAgent):
-    """Planner agent for task decomposition and strategy creation."""
+    """Planner agent for task planning and organization."""
     
     def __init__(self):
         super().__init__(
             agent_type=AgentType.PLANNER,
             name="Planner",
-            description="Breaks down complex tasks into actionable steps and creates execution strategies",
+            description="Plans and organizes tasks to be completed by other agents",
             enabled=True,
             max_retries=3,
-            timeout=120,
+            timeout=300,
         )
     
     def get_system_prompt(self) -> str:
-        return """You are a strategic planning AI agent. Your role is to:
+        return """You are a task planning AI agent. Your role is to:
 
-1. Analyze complex tasks and break them down into clear, actionable steps
-2. Create execution strategies that optimize for efficiency and quality
-3. Identify potential challenges and dependencies
-4. Prioritize tasks based on importance and dependencies
-5. Consider resource constraints and time limitations
+1. Analyze user requests and break them down into manageable tasks
+2. Create a structured plan with clear steps and dependencies
+3. Assign tasks to appropriate specialized agents
+4. Consider resource constraints and time requirements
+5. Identify potential risks and mitigation strategies
+6. Provide clear instructions and context for each task
 
 When planning, always:
-- Break tasks into specific, measurable steps
-- Identify dependencies between steps
-- Estimate effort and time requirements
-- Consider potential risks and mitigation strategies
-- Ensure the plan is realistic and achievable
+- Consider the overall goal and objectives
+- Break down complex tasks into smaller, manageable steps
+- Identify dependencies between tasks
+- Estimate time and resource requirements
+- Consider potential risks and challenges
+- Provide clear, actionable instructions
 
-Output your plan in a structured format that can be easily parsed and executed by other agents."""
+Generate comprehensive plans that enable efficient task execution."""
 
     async def execute(self, request: AgentRequest) -> AgentResult:
         """Execute the planning logic."""
@@ -54,12 +55,8 @@ Output your plan in a structured format that can be easily parsed and executed b
             # Build the prompt
             prompt = self._build_planning_prompt(task, context)
             
-            # Call the AI model (this would integrate with your model router)
-            # For now, we'll simulate the response
+            # Generate the plan
             plan = await self._generate_plan(prompt)
-            
-            # Parse and structure the plan
-            structured_plan = self._parse_plan(plan)
             
             execution_time = (datetime.now() - start_time).total_seconds()
             
@@ -67,10 +64,8 @@ Output your plan in a structured format that can be easily parsed and executed b
                 success=True,
                 output=plan,
                 metadata={
-                    "structured_plan": structured_plan,
-                    "steps_count": len(structured_plan.get("steps", [])),
-                    "estimated_duration": structured_plan.get("estimated_duration"),
-                    "priority": structured_plan.get("priority"),
+                    "task_count": self._count_tasks(plan),
+                    "estimated_duration": self._estimate_duration(plan),
                 },
                 execution_time=execution_time,
                 tokens_used=len(prompt.split()),  # Approximate
@@ -97,143 +92,68 @@ Output your plan in a structured format that can be easily parsed and executed b
                 prompt += f"- {key}: {value}\n"
             prompt += "\n"
         
-        prompt += """Please create a detailed plan for this task. Include:
+        prompt += """Please create a comprehensive plan for this task. Include:
 
-1. Task breakdown into specific steps
-2. Dependencies between steps
-3. Estimated effort for each step
-4. Potential risks and mitigation strategies
-5. Success criteria for each step
-6. Overall timeline and milestones
+1. Overall goal and objectives
+2. Breakdown into specific tasks and subtasks
+3. Dependencies between tasks
+4. Resource requirements and constraints
+5. Timeline and milestones
+6. Risk assessment and mitigation strategies
+7. Success criteria and metrics
 
-Format your response as a structured plan that can be easily parsed."""
-
+Generate a structured plan that can be executed by specialized agents."""
+        
         return prompt
     
     async def _generate_plan(self, prompt: str) -> str:
-        """Generate the plan using the AI model."""
-        # This would integrate with your model router
-        # For now, return a sample plan
-        return """# Task Execution Plan
+        """Generate the plan."""
+        # In a real implementation, this would call an AI model
+        # For now, return a placeholder plan
+        return """
+# Project Plan
 
-## Overview
-Break down the given task into manageable steps with clear dependencies and success criteria.
+## Goal
+Complete the requested task efficiently and effectively.
 
-## Steps
-
-### Step 1: Analysis and Requirements Gathering
-- **Description**: Understand the task requirements and constraints
-- **Effort**: 2-4 hours
-- **Dependencies**: None
-- **Success Criteria**: Clear understanding of requirements documented
-- **Risks**: Incomplete requirements
-- **Mitigation**: Ask clarifying questions, document assumptions
-
-### Step 2: Design and Architecture
-- **Description**: Create high-level design and architecture
-- **Effort**: 4-8 hours
-- **Dependencies**: Step 1
-- **Success Criteria**: Architecture diagram and design document
-- **Risks**: Over-engineering or under-designing
-- **Mitigation**: Review with stakeholders, consider alternatives
-
-### Step 3: Implementation
-- **Description**: Implement the solution following the design
-- **Effort**: 8-16 hours
-- **Dependencies**: Step 2
-- **Success Criteria**: Working implementation with tests
-- **Risks**: Scope creep, technical debt
-- **Mitigation**: Regular reviews, incremental development
-
-### Step 4: Testing and Validation
-- **Description**: Test the implementation thoroughly
-- **Effort**: 4-8 hours
-- **Dependencies**: Step 3
-- **Success Criteria**: All tests pass, no critical bugs
-- **Risks**: Incomplete testing
-- **Mitigation**: Automated tests, manual testing checklist
-
-### Step 5: Documentation and Deployment
-- **Description**: Document the solution and deploy
-- **Effort**: 2-4 hours
-- **Dependencies**: Step 4
-- **Success Criteria**: Documentation complete, deployed successfully
-- **Risks**: Poor documentation, deployment issues
-- **Mitigation**: Documentation templates, deployment checklist
+## Tasks
+1. Analyze requirements
+2. Design solution
+3. Implement solution
+4. Test solution
+5. Deploy solution
 
 ## Timeline
-- **Total Estimated Duration**: 20-40 hours
-- **Critical Path**: Steps 1 → 2 → 3 → 4 → 5
-- **Milestones**: Requirements (Day 1), Design (Day 2-3), Implementation (Day 4-7), Testing (Day 8-9), Deployment (Day 10)
+- Task 1: 1 day
+- Task 2: 2 days
+- Task 3: 3 days
+- Task 4: 1 day
+- Task 5: 1 day
 
-## Priority
-High - This is a core functionality that affects the entire system."""
+## Dependencies
+- Task 2 depends on Task 1
+- Task 3 depends on Task 2
+- Task 4 depends on Task 3
+- Task 5 depends on Task 4
+
+## Risks
+- Technical challenges
+- Resource constraints
+- Time constraints
+
+## Mitigation
+- Regular progress reviews
+- Contingency planning
+- Resource optimization
+"""
     
-    def _parse_plan(self, plan: str) -> Dict[str, Any]:
-        """Parse the plan into a structured format."""
-        # This would parse the markdown/structured plan
-        # For now, return a basic structure
-        return {
-            "steps": [
-                {
-                    "id": 1,
-                    "name": "Analysis and Requirements Gathering",
-                    "description": "Understand the task requirements and constraints",
-                    "effort": "2-4 hours",
-                    "dependencies": [],
-                    "success_criteria": "Clear understanding of requirements documented",
-                    "risks": ["Incomplete requirements"],
-                    "mitigation": ["Ask clarifying questions", "Document assumptions"]
-                },
-                {
-                    "id": 2,
-                    "name": "Design and Architecture",
-                    "description": "Create high-level design and architecture",
-                    "effort": "4-8 hours",
-                    "dependencies": [1],
-                    "success_criteria": "Architecture diagram and design document",
-                    "risks": ["Over-engineering", "Under-designing"],
-                    "mitigation": ["Review with stakeholders", "Consider alternatives"]
-                },
-                {
-                    "id": 3,
-                    "name": "Implementation",
-                    "description": "Implement the solution following the design",
-                    "effort": "8-16 hours",
-                    "dependencies": [2],
-                    "success_criteria": "Working implementation with tests",
-                    "risks": ["Scope creep", "Technical debt"],
-                    "mitigation": ["Regular reviews", "Incremental development"]
-                },
-                {
-                    "id": 4,
-                    "name": "Testing and Validation",
-                    "description": "Test the implementation thoroughly",
-                    "effort": "4-8 hours",
-                    "dependencies": [3],
-                    "success_criteria": "All tests pass, no critical bugs",
-                    "risks": ["Incomplete testing"],
-                    "mitigation": ["Automated tests", "Manual testing checklist"]
-                },
-                {
-                    "id": 5,
-                    "name": "Documentation and Deployment",
-                    "description": "Document the solution and deploy",
-                    "effort": "2-4 hours",
-                    "dependencies": [4],
-                    "success_criteria": "Documentation complete, deployed successfully",
-                    "risks": ["Poor documentation", "Deployment issues"],
-                    "mitigation": ["Documentation templates", "Deployment checklist"]
-                }
-            ],
-            "estimated_duration": "20-40 hours",
-            "priority": "High",
-            "critical_path": [1, 2, 3, 4, 5],
-            "milestones": [
-                {"day": 1, "milestone": "Requirements"},
-                {"day": 2, "milestone": "Design"},
-                {"day": 4, "milestone": "Implementation"},
-                {"day": 8, "milestone": "Testing"},
-                {"day": 10, "milestone": "Deployment"}
-            ]
-        }
+    def _count_tasks(self, plan: str) -> int:
+        """Count the number of tasks in a plan."""
+        # Simple heuristic: count lines that start with a number
+        lines = plan.split('\n')
+        return sum(1 for line in lines if line.strip() and line.strip()[0].isdigit())
+    
+    def _estimate_duration(self, plan: str) -> str:
+        """Estimate the duration of a plan."""
+        # Simple heuristic: return a fixed estimate
+        return "5 days"

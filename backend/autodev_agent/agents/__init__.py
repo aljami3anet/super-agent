@@ -1,23 +1,27 @@
 """
-AI Agent Orchestration System
+Agents module for the AI Coder Agent.
 
-This module provides the core agent classes and orchestration logic for the AI Coder Agent system.
+This module provides the agent implementations for the AI Coder Agent system.
 """
 
-from .base import BaseAgent
-from .planner import PlannerAgent
+from .base import BaseAgent, AgentRequest, AgentResult, AgentStatus, AgentType
 from .coder import CoderAgent
 from .critic import CriticAgent
-from .tester import TesterAgent
+from .orchestrator import OrchestratorAgent
+from .planner import PlannerAgent
 from .summarizer import SummarizerAgent
-from .orchestrator import AgentOrchestrator
+from .tester import TesterAgent
 
 __all__ = [
-    'BaseAgent',
-    'PlannerAgent',
-    'CoderAgent',
-    'CriticAgent',
-    'TesterAgent',
-    'SummarizerAgent',
-    'AgentOrchestrator',
+    "BaseAgent",
+    "AgentRequest",
+    "AgentResult",
+    "AgentStatus",
+    "AgentType",
+    "CoderAgent",
+    "CriticAgent",
+    "OrchestratorAgent",
+    "PlannerAgent",
+    "SummarizerAgent",
+    "TesterAgent",
 ]

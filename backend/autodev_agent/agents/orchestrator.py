@@ -1,405 +1,270 @@
 """
-Agent Orchestrator
+Orchestrator Agent
 
-Coordinates all agents and manages the complete workflow from planning to execution.
+Responsible for coordinating and managing the execution of other agents.
 """
 
 import asyncio
+import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
-from uuid import uuid4
+from typing import Any, Dict, List, Optional
 
-from .base import BaseAgent, AgentRequest, AgentResult, AgentType, AgentStatus
-from .planner import PlannerAgent
+from .base import BaseAgent, AgentRequest, AgentResult, AgentType
 from .coder import CoderAgent
 from .critic import CriticAgent
-from .tester import TesterAgent
+from .planner import PlannerAgent
 from .summarizer import SummarizerAgent
-from ..services.logging import get_logger
+from .tester import TesterAgent
+
+logger = logging.getLogger(__name__)
 
 
-class AgentOrchestrator:
-    """Orchestrates the complete agent workflow."""
+class OrchestratorAgent(BaseAgent):
+    """Orchestrator agent for coordinating and managing other agents."""
     
     def __init__(self):
-        self.logger = get_logger(__name__)
+        super().__init__(
+            agent_type=AgentType.PLANNER,  # Using PLANNER type as there's no ORCHESTRATOR type
+            name="Orchestrator",
+            description="Coordinates and manages the execution of other agents",
+            enabled=True,
+            max_retries=3,
+            timeout=600,  # Longer timeout for orchestration
+        )
         
-        # Initialize all agents
-        self.agents: Dict[AgentType, BaseAgent] = {
-            AgentType.PLANNER: PlannerAgent(),
-            AgentType.CODER: CoderAgent(),
-            AgentType.CRITIC: CriticAgent(),
-            AgentType.TESTER: TesterAgent(),
-            AgentType.SUMMARIZER: SummarizerAgent(),
+        # Initialize agents
+        self.agents = {
+            "planner": PlannerAgent(),
+            "coder": CoderAgent(),
+            "critic": CriticAgent(),
+            "tester": TesterAgent(),
+            "summarizer": SummarizerAgent(),
         }
-        
-        # Workflow state
-        self.active_workflows: Dict[str, Dict[str, Any]] = {}
-        self.workflow_history: List[Dict[str, Any]] = []
-        
-        # Statistics
-        self.total_workflows = 0
-        self.successful_workflows = 0
-        self.failed_workflows = 0
     
-    async def execute_workflow(
-        self,
-        task: str,
-        context: Optional[Dict[str, Any]] = None,
-        workflow_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Execute a complete workflow with all agents."""
-        if workflow_id is None:
-            workflow_id = str(uuid4())
-        
-        workflow = {
-            "id": workflow_id,
-            "task": task,
-            "context": context or {},
-            "user_id": user_id,
-            "start_time": datetime.now(),
-            "status": "running",
-            "steps": [],
-            "results": {},
-            "error": None,
-        }
-        
-        self.active_workflows[workflow_id] = workflow
-        self.total_workflows += 1
+    def get_system_prompt(self) -> str:
+        return """You are an orchestration AI agent. Your role is to:
+
+1. Coordinate and manage the execution of other agents
+2. Determine the optimal sequence of agent operations
+3. Handle errors and retries appropriately
+4. Aggregate results from multiple agents
+5. Ensure efficient resource utilization
+6. Monitor and track progress of agent execution
+
+When orchestrating, always:
+- Consider dependencies between agents
+- Optimize for efficiency and quality
+- Handle errors gracefully with retries
+- Aggregate and synthesize results
+- Monitor resource usage and constraints
+- Provide clear status updates
+
+Generate effective orchestration plans that maximize productivity and quality."""
+    
+    async def execute(self, request: AgentRequest) -> AgentResult:
+        """Execute the orchestration logic."""
+        start_time = datetime.now()
         
         try:
-            self.logger.info(f"Starting workflow {workflow_id} for task: {task}")
+            # Extract task and context
+            task = request.task
+            context = request.context or {}
             
-            # Step 1: Planning
-            plan_result = await self._execute_planning(task, context, workflow_id)
-            workflow["steps"].append({
-                "agent": "planner",
-                "status": "completed",
-                "result": plan_result,
-                "timestamp": datetime.now(),
-            })
+            # Execute the agent workflow
+            result = await self._execute_workflow(task, context)
             
-            if not plan_result["success"]:
-                raise Exception(f"Planning failed: {plan_result['error']}")
+            execution_time = (datetime.now() - start_time).total_seconds()
             
-            # Step 2: Coding
-            code_result = await self._execute_coding(task, context, plan_result, workflow_id)
-            workflow["steps"].append({
-                "agent": "coder",
-                "status": "completed",
-                "result": code_result,
-                "timestamp": datetime.now(),
-            })
-            
-            if not code_result["success"]:
-                raise Exception(f"Coding failed: {code_result['error']}")
-            
-            # Step 3: Code Review
-            review_result = await self._execute_review(task, context, code_result, workflow_id)
-            workflow["steps"].append({
-                "agent": "critic",
-                "status": "completed",
-                "result": review_result,
-                "timestamp": datetime.now(),
-            })
-            
-            # Step 4: Testing
-            test_result = await self._execute_testing(task, context, code_result, workflow_id)
-            workflow["steps"].append({
-                "agent": "tester",
-                "status": "completed",
-                "result": test_result,
-                "timestamp": datetime.now(),
-            })
-            
-            if not test_result["success"]:
-                raise Exception(f"Testing failed: {test_result['error']}")
-            
-            # Step 5: Summarization
-            summary_result = await self._execute_summarization(
-                task, context, workflow["steps"], workflow_id
+            return AgentResult(
+                success=result["success"],
+                output=result["output"],
+                metadata={
+                    "agents_executed": result["agents_executed"],
+                    "total_execution_time": result["total_execution_time"],
+                    "workflow_steps": result["workflow_steps"],
+                },
+                execution_time=execution_time,
+                tokens_used=result.get("tokens_used", 0),
+                cost=result.get("cost", 0.0),
             )
-            workflow["steps"].append({
-                "agent": "summarizer",
-                "status": "completed",
-                "result": summary_result,
-                "timestamp": datetime.now(),
-            })
-            
-            # Workflow completed successfully
-            workflow["status"] = "completed"
-            workflow["end_time"] = datetime.now()
-            workflow["duration"] = (workflow["end_time"] - workflow["start_time"]).total_seconds()
-            
-            self.successful_workflows += 1
-            self.workflow_history.append(workflow)
-            
-            self.logger.info(f"Workflow {workflow_id} completed successfully")
-            
-            return {
-                "workflow_id": workflow_id,
-                "status": "completed",
-                "steps": workflow["steps"],
-                "summary": summary_result.get("output", ""),
-                "duration": workflow["duration"],
-            }
             
         except Exception as e:
-            workflow["status"] = "failed"
-            workflow["error"] = str(e)
-            workflow["end_time"] = datetime.now()
-            workflow["duration"] = (workflow["end_time"] - workflow["start_time"]).total_seconds()
-            
-            self.failed_workflows += 1
-            self.workflow_history.append(workflow)
-            
-            self.logger.error(f"Workflow {workflow_id} failed: {e}")
-            
-            return {
-                "workflow_id": workflow_id,
-                "status": "failed",
-                "error": str(e),
-                "steps": workflow["steps"],
-                "duration": workflow["duration"],
-            }
-        
-        finally:
-            # Clean up active workflow
-            if workflow_id in self.active_workflows:
-                del self.active_workflows[workflow_id]
+            execution_time = (datetime.now() - start_time).total_seconds()
+            logger.error(f"Orchestration failed: {e}")
+            return AgentResult(
+                success=False,
+                output="",
+                error=str(e),
+                execution_time=execution_time
+            )
     
-    async def _execute_planning(
-        self, task: str, context: Dict[str, Any], workflow_id: str
-    ) -> Dict[str, Any]:
-        """Execute the planning phase."""
-        self.logger.info(f"Executing planning phase for workflow {workflow_id}")
+    async def _execute_workflow(self, task: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the agent workflow."""
+        workflow_steps = []
+        agents_executed = []
+        total_execution_time = 0.0
+        total_tokens_used = 0
+        total_cost = 0.0
         
-        request = AgentRequest(
+        # Step 1: Planning
+        logger.info("Starting planning phase")
+        workflow_steps.append("Planning")
+        
+        planner_request = AgentRequest(
             task=task,
             context=context,
-            conversation_id=workflow_id,
+            conversation_id=request.conversation_id,
+            user_id=request.user_id,
         )
         
-        result = await self.agents[AgentType.PLANNER].run(request)
+        planner_result = await self.agents["planner"].run(planner_request)
+        agents_executed.append("planner")
+        total_execution_time += planner_result.execution_time
+        total_tokens_used += planner_result.tokens_used
+        total_cost += planner_result.cost
         
-        return {
-            "success": result.success,
-            "output": result.output,
-            "metadata": result.metadata,
-            "error": result.error,
-            "execution_time": result.execution_time,
-        }
-    
-    async def _execute_coding(
-        self, task: str, context: Dict[str, Any], plan_result: Dict[str, Any], workflow_id: str
-    ) -> Dict[str, Any]:
-        """Execute the coding phase."""
-        self.logger.info(f"Executing coding phase for workflow {workflow_id}")
-        
-        # Include planning results in context
-        coding_context = {
-            **context,
-            "plan": plan_result.get("output", ""),
-            "plan_metadata": plan_result.get("metadata", {}),
-        }
-        
-        request = AgentRequest(
-            task=task,
-            context=coding_context,
-            conversation_id=workflow_id,
-        )
-        
-        result = await self.agents[AgentType.CODER].run(request)
-        
-        return {
-            "success": result.success,
-            "output": result.output,
-            "metadata": result.metadata,
-            "error": result.error,
-            "execution_time": result.execution_time,
-        }
-    
-    async def _execute_review(
-        self, task: str, context: Dict[str, Any], code_result: Dict[str, Any], workflow_id: str
-    ) -> Dict[str, Any]:
-        """Execute the code review phase."""
-        self.logger.info(f"Executing review phase for workflow {workflow_id}")
-        
-        review_context = {
-            **context,
-            "code": code_result.get("output", ""),
-            "code_metadata": code_result.get("metadata", {}),
-        }
-        
-        request = AgentRequest(
-            task=f"Review the generated code for: {task}",
-            context=review_context,
-            conversation_id=workflow_id,
-        )
-        
-        result = await self.agents[AgentType.CRITIC].run(request)
-        
-        return {
-            "success": result.success,
-            "output": result.output,
-            "metadata": result.metadata,
-            "error": result.error,
-            "execution_time": result.execution_time,
-        }
-    
-    async def _execute_testing(
-        self, task: str, context: Dict[str, Any], code_result: Dict[str, Any], workflow_id: str
-    ) -> Dict[str, Any]:
-        """Execute the testing phase."""
-        self.logger.info(f"Executing testing phase for workflow {workflow_id}")
-        
-        testing_context = {
-            **context,
-            "code": code_result.get("output", ""),
-            "code_metadata": code_result.get("metadata", {}),
-        }
-        
-        request = AgentRequest(
-            task=f"Create tests for the generated code for: {task}",
-            context=testing_context,
-            conversation_id=workflow_id,
-        )
-        
-        result = await self.agents[AgentType.TESTER].run(request)
-        
-        return {
-            "success": result.success,
-            "output": result.output,
-            "metadata": result.metadata,
-            "error": result.error,
-            "execution_time": result.execution_time,
-        }
-    
-    async def _execute_summarization(
-        self, task: str, context: Dict[str, Any], steps: List[Dict[str, Any]], workflow_id: str
-    ) -> Dict[str, Any]:
-        """Execute the summarization phase."""
-        self.logger.info(f"Executing summarization phase for workflow {workflow_id}")
-        
-        # Create summary content from all steps
-        summary_content = self._create_summary_content(task, steps)
-        
-        summary_context = {
-            **context,
-            "workflow_steps": steps,
-            "task": task,
-        }
-        
-        request = AgentRequest(
-            task="Summarize the complete workflow execution",
-            context=summary_context,
-            conversation_id=workflow_id,
-        )
-        
-        result = await self.agents[AgentType.SUMMARIZER].run(request)
-        
-        return {
-            "success": result.success,
-            "output": result.output,
-            "metadata": result.metadata,
-            "error": result.error,
-            "execution_time": result.execution_time,
-        }
-    
-    def _create_summary_content(self, task: str, steps: List[Dict[str, Any]]) -> str:
-        """Create content for summarization from workflow steps."""
-        content = f"Task: {task}\n\n"
-        content += "Workflow Execution Summary:\n\n"
-        
-        for i, step in enumerate(steps, 1):
-            agent = step["agent"]
-            result = step["result"]
-            timestamp = step["timestamp"]
-            
-            content += f"Step {i}: {agent.title()} Agent\n"
-            content += f"Timestamp: {timestamp}\n"
-            content += f"Status: {'Success' if result.get('success') else 'Failed'}\n"
-            content += f"Execution Time: {result.get('execution_time', 0):.2f}s\n"
-            
-            if result.get("error"):
-                content += f"Error: {result['error']}\n"
-            
-            if result.get("output"):
-                content += f"Output: {result['output'][:500]}...\n"
-            
-            content += "\n"
-        
-        return content
-    
-    def get_agent_status(self) -> Dict[str, Any]:
-        """Get status of all agents."""
-        status = {}
-        for agent_type, agent in self.agents.items():
-            status[agent_type.value] = {
-                "name": agent.name,
-                "enabled": agent.enabled,
-                "status": agent.status.value,
-                "current_task": agent.current_task,
-                "stats": agent.get_stats(),
+        if not planner_result.success:
+            return {
+                "success": False,
+                "output": "Planning failed",
+                "agents_executed": agents_executed,
+                "total_execution_time": total_execution_time,
+                "workflow_steps": workflow_steps,
+                "tokens_used": total_tokens_used,
+                "cost": total_cost,
             }
-        return status
-    
-    def get_workflow_status(self, workflow_id: str) -> Optional[Dict[str, Any]]:
-        """Get status of a specific workflow."""
-        if workflow_id in self.active_workflows:
-            return self.active_workflows[workflow_id]
         
-        # Check history
-        for workflow in self.workflow_history:
-            if workflow["id"] == workflow_id:
-                return workflow
+        # Step 2: Coding
+        logger.info("Starting coding phase")
+        workflow_steps.append("Coding")
         
-        return None
-    
-    def get_workflow_history(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get recent workflow history."""
-        return self.workflow_history[-limit:] if self.workflow_history else []
-    
-    def get_statistics(self) -> Dict[str, Any]:
-        """Get orchestrator statistics."""
-        return {
-            "total_workflows": self.total_workflows,
-            "successful_workflows": self.successful_workflows,
-            "failed_workflows": self.failed_workflows,
-            "success_rate": self.successful_workflows / self.total_workflows if self.total_workflows > 0 else 0,
-            "active_workflows": len(self.active_workflows),
-            "agent_status": self.get_agent_status(),
+        coder_context = {
+            **context,
+            "plan": planner_result.output,
         }
-    
-    def reset_statistics(self):
-        """Reset all statistics."""
-        self.total_workflows = 0
-        self.successful_workflows = 0
-        self.failed_workflows = 0
-        self.workflow_history.clear()
-        self.active_workflows.clear()
         
-        # Reset agent statistics
-        for agent in self.agents.values():
-            agent.reset_stats()
-    
-    def enable_agent(self, agent_type: AgentType):
-        """Enable a specific agent."""
-        if agent_type in self.agents:
-            self.agents[agent_type].enable()
-            self.logger.info(f"Enabled agent: {agent_type.value}")
-    
-    def disable_agent(self, agent_type: AgentType):
-        """Disable a specific agent."""
-        if agent_type in self.agents:
-            self.agents[agent_type].disable()
-            self.logger.info(f"Disabled agent: {agent_type.value}")
-    
-    def get_agent(self, agent_type: AgentType) -> Optional[BaseAgent]:
-        """Get a specific agent."""
-        return self.agents.get(agent_type)
-    
-    def get_all_agents(self) -> Dict[AgentType, BaseAgent]:
-        """Get all agents."""
-        return self.agents.copy()
+        coder_request = AgentRequest(
+            task=task,
+            context=coder_context,
+            conversation_id=request.conversation_id,
+            user_id=request.user_id,
+        )
+        
+        coder_result = await self.agents["coder"].run(coder_request)
+        agents_executed.append("coder")
+        total_execution_time += coder_result.execution_time
+        total_tokens_used += coder_result.tokens_used
+        total_cost += coder_result.cost
+        
+        if not coder_result.success:
+            return {
+                "success": False,
+                "output": "Coding failed",
+                "agents_executed": agents_executed,
+                "total_execution_time": total_execution_time,
+                "workflow_steps": workflow_steps,
+                "tokens_used": total_tokens_used,
+                "cost": total_cost,
+            }
+        
+        # Step 3: Critique
+        logger.info("Starting critique phase")
+        workflow_steps.append("Critique")
+        
+        critic_context = {
+            **context,
+            "plan": planner_result.output,
+            "code": coder_result.output,
+        }
+        
+        critic_request = AgentRequest(
+            task=task,
+            context=critic_context,
+            conversation_id=request.conversation_id,
+            user_id=request.user_id,
+        )
+        
+        critic_result = await self.agents["critic"].run(critic_request)
+        agents_executed.append("critic")
+        total_execution_time += critic_result.execution_time
+        total_tokens_used += critic_result.tokens_used
+        total_cost += critic_result.cost
+        
+        # Step 4: Testing
+        logger.info("Starting testing phase")
+        workflow_steps.append("Testing")
+        
+        tester_context = {
+            **context,
+            "plan": planner_result.output,
+            "code": coder_result.output,
+            "critique": critic_result.output,
+        }
+        
+        tester_request = AgentRequest(
+            task=task,
+            context=tester_context,
+            conversation_id=request.conversation_id,
+            user_id=request.user_id,
+        )
+        
+        tester_result = await self.agents["tester"].run(tester_request)
+        agents_executed.append("tester")
+        total_execution_time += tester_result.execution_time
+        total_tokens_used += tester_result.tokens_used
+        total_cost += tester_result.cost
+        
+        # Step 5: Summarization
+        logger.info("Starting summarization phase")
+        workflow_steps.append("Summarization")
+        
+        summarizer_context = {
+            **context,
+            "plan": planner_result.output,
+            "code": coder_result.output,
+            "critique": critic_result.output,
+            "test_results": tester_result.output,
+        }
+        
+        summarizer_request = AgentRequest(
+            task=task,
+            context=summarizer_context,
+            conversation_id=request.conversation_id,
+            user_id=request.user_id,
+        )
+        
+        summarizer_result = await self.agents["summarizer"].run(summarizer_request)
+        agents_executed.append("summarizer")
+        total_execution_time += summarizer_result.execution_time
+        total_tokens_used += summarizer_result.tokens_used
+        total_cost += summarizer_result.cost
+        
+        # Combine results
+        output = f"""
+# Execution Summary
+
+## Plan
+{planner_result.output}
+
+## Code
+{coder_result.output}
+
+## Critique
+{critic_result.output}
+
+## Test Results
+{tester_result.output}
+
+## Summary
+{summarizer_result.output}
+"""
+        
+        return {
+            "success": True,
+            "output": output,
+            "agents_executed": agents_executed,
+            "total_execution_time": total_execution_time,
+            "workflow_steps": workflow_steps,
+            "tokens_used": total_tokens_used,
+            "cost": total_cost,
+        }

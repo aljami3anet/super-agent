@@ -1,13 +1,9 @@
 """
-Configuration module for AI Coder Agent.
+Configuration module for the AI Coder Agent.
 
-This module provides configuration management with:
-- Environment variable loading
-- Configuration validation
-- Default values
-- Type hints
+This module provides configuration management for the AI Coder Agent application.
 """
 
-from .settings import Settings, settings
+from .settings import settings
 
-__all__ = ["Settings", "settings"]
+__all__ = ["settings"]

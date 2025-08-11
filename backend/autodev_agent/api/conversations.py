@@ -1,348 +1,197 @@
 """
-Conversations API endpoints for AI Coder Agent.
+Conversations API endpoints.
 
-This module provides API endpoints for:
-- Conversation management
-- Summary generation
-- Memory operations
-- Conversation history
+This module provides API endpoints for managing conversations
+with the AI agents.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
-from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 
-from ..services.conversation import ConversationService
-from ..config import settings
+from ..services.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 
-# Initialize conversation service
-conversation_service = ConversationService()
+
+class Conversation(BaseModel):
+    """Conversation model."""
+    id: str
+    user_id: str
+    title: str
+    messages: List[Dict[str, Any]]
+    created_at: str
+    updated_at: str
+    summary: Optional[str] = None
 
 
-# Request/Response Models
+class ConversationListResponse(BaseModel):
+    """Response model for listing conversations."""
+    conversations: List[Conversation]
+    total: int
+    page: int
+    page_size: int
+
+
 class ConversationCreateRequest(BaseModel):
     """Request model for creating a conversation."""
-    title: str = Field(..., description="Conversation title")
-    description: Optional[str] = Field(default=None, description="Conversation description")
-    context: Optional[Dict[str, Any]] = Field(default=None, description="Initial context")
+    user_id: str
+    title: str
 
 
-class ConversationResponse(BaseModel):
-    """Response model for conversation operations."""
-    conversation_id: str = Field(..., description="Unique conversation ID")
-    title: str = Field(..., description="Conversation title")
-    description: Optional[str] = Field(default=None, description="Conversation description")
-    created_at: datetime = Field(..., description="Creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
-    message_count: int = Field(..., description="Number of messages")
-    summary: Optional[str] = Field(default=None, description="Conversation summary")
+class ConversationUpdateRequest(BaseModel):
+    """Request model for updating a conversation."""
+    title: Optional[str] = None
+    summary: Optional[str] = None
 
 
-class MessageRequest(BaseModel):
-    """Request model for adding a message."""
-    conversation_id: str = Field(..., description="Conversation ID")
-    content: str = Field(..., description="Message content")
-    role: str = Field(..., description="Message role (user/assistant)")
-    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Message metadata")
+class Message(BaseModel):
+    """Message model."""
+    role: str
+    content: str
+    timestamp: str
 
 
-class MessageResponse(BaseModel):
-    """Response model for message operations."""
-    message_id: str = Field(..., description="Unique message ID")
-    conversation_id: str = Field(..., description="Conversation ID")
-    content: str = Field(..., description="Message content")
-    role: str = Field(..., description="Message role")
-    timestamp: datetime = Field(..., description="Message timestamp")
-    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Message metadata")
+class MessageAddRequest(BaseModel):
+    """Request model for adding a message to a conversation."""
+    message: Message
 
 
-class SummaryRequest(BaseModel):
-    """Request model for generating a summary."""
-    conversation_id: str = Field(..., description="Conversation ID")
-    max_length: Optional[int] = Field(default=None, description="Maximum summary length")
-    compression_ratio: Optional[float] = Field(default=None, description="Compression ratio")
+# In-memory storage for conversations (in a real app, this would be a database)
+conversations_db = {}
+conversation_counter = 0
 
 
-class SummaryResponse(BaseModel):
-    """Response model for summary operations."""
-    conversation_id: str = Field(..., description="Conversation ID")
-    summary: str = Field(..., description="Generated summary")
-    original_length: int = Field(..., description="Original conversation length")
-    summary_length: int = Field(..., description="Summary length")
-    compression_ratio: float = Field(..., description="Compression ratio")
-    generated_at: datetime = Field(..., description="Summary generation timestamp")
-
-
-# Conversation Management Endpoints
-@router.post("/create", response_model=ConversationResponse)
-async def create_conversation(request: ConversationCreateRequest):
-    """Create a new conversation."""
-    try:
-        conversation = await conversation_service.create_conversation(
-            title=request.title,
-            description=request.description,
-            context=request.context
-        )
-        
-        return ConversationResponse(
-            conversation_id=conversation["conversation_id"],
-            title=conversation["title"],
-            description=conversation["description"],
-            created_at=conversation["created_at"],
-            updated_at=conversation["updated_at"],
-            message_count=conversation["message_count"],
-            summary=conversation.get("summary")
-        )
-        
-    except Exception as e:
-        logger.error(f"Failed to create conversation: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/list", response_model=List[ConversationResponse])
+@router.get("/", response_model=ConversationListResponse)
 async def list_conversations(
-    limit: Optional[int] = 50,
-    offset: Optional[int] = 0,
-    include_summaries: bool = False
+    user_id: str,
+    page: int = 1,
+    page_size: int = 10,
 ):
-    """List all conversations."""
-    try:
-        conversations = await conversation_service.list_conversations(
-            limit=limit,
-            offset=offset,
-            include_summaries=include_summaries
-        )
-        
-        return [
-            ConversationResponse(
-                conversation_id=conv["conversation_id"],
-                title=conv["title"],
-                description=conv["description"],
-                created_at=conv["created_at"],
-                updated_at=conv["updated_at"],
-                message_count=conv["message_count"],
-                summary=conv.get("summary")
-            )
-            for conv in conversations
-        ]
-        
-    except Exception as e:
-        logger.error(f"Failed to list conversations: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    """List conversations for a user."""
+    # Filter conversations by user_id
+    user_conversations = [
+        conv for conv in conversations_db.values() if conv.user_id == user_id
+    ]
+    
+    # Sort by updated_at (newest first)
+    user_conversations.sort(key=lambda x: x.updated_at, reverse=True)
+    
+    # Paginate
+    start = (page - 1) * page_size
+    end = start + page_size
+    paginated_conversations = user_conversations[start:end]
+    
+    return {
+        "conversations": paginated_conversations,
+        "total": len(user_conversations),
+        "page": page,
+        "page_size": page_size,
+    }
 
 
-@router.get("/{conversation_id}", response_model=ConversationResponse)
+@router.get("/{conversation_id}", response_model=Conversation)
 async def get_conversation(conversation_id: str):
     """Get a specific conversation."""
-    try:
-        conversation = await conversation_service.get_conversation(conversation_id)
-        
-        if not conversation:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-        
-        return ConversationResponse(
-            conversation_id=conversation["conversation_id"],
-            title=conversation["title"],
-            description=conversation["description"],
-            created_at=conversation["created_at"],
-            updated_at=conversation["updated_at"],
-            message_count=conversation["message_count"],
-            summary=conversation.get("summary")
+    if conversation_id not in conversations_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Conversation '{conversation_id}' not found",
         )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get conversation {conversation_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    
+    return conversations_db[conversation_id]
+
+
+@router.post("/", response_model=Conversation)
+async def create_conversation(request: ConversationCreateRequest):
+    """Create a new conversation."""
+    global conversation_counter
+    conversation_counter += 1
+    
+    conversation_id = str(conversation_counter)
+    
+    conversation = Conversation(
+        id=conversation_id,
+        user_id=request.user_id,
+        title=request.title,
+        messages=[],
+        created_at="2023-01-01T00:00:00Z",  # In a real app, use current time
+        updated_at="2023-01-01T00:00:00Z",  # In a real app, use current time
+    )
+    
+    conversations_db[conversation_id] = conversation
+    
+    logger.info(f"Created conversation {conversation_id} for user {request.user_id}")
+    
+    return conversation
+
+
+@router.put("/{conversation_id}", response_model=Conversation)
+async def update_conversation(
+    conversation_id: str,
+    request: ConversationUpdateRequest,
+):
+    """Update a conversation."""
+    if conversation_id not in conversations_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Conversation '{conversation_id}' not found",
+        )
+    
+    conversation = conversations_db[conversation_id]
+    
+    if request.title is not None:
+        conversation.title = request.title
+    
+    if request.summary is not None:
+        conversation.summary = request.summary
+    
+    # In a real app, update the updated_at timestamp
+    conversation.updated_at = "2023-01-01T00:00:00Z"
+    
+    logger.info(f"Updated conversation {conversation_id}")
+    
+    return conversation
 
 
 @router.delete("/{conversation_id}")
 async def delete_conversation(conversation_id: str):
     """Delete a conversation."""
-    try:
-        success = await conversation_service.delete_conversation(conversation_id)
-        
-        if not success:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-        
-        return {"message": f"Conversation {conversation_id} deleted successfully"}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to delete conversation {conversation_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# Message Management Endpoints
-@router.post("/{conversation_id}/messages", response_model=MessageResponse)
-async def add_message(conversation_id: str, request: MessageRequest):
-    """Add a message to a conversation."""
-    try:
-        message = await conversation_service.add_message(
-            conversation_id=conversation_id,
-            content=request.content,
-            role=request.role,
-            metadata=request.metadata
+    if conversation_id not in conversations_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Conversation '{conversation_id}' not found",
         )
-        
-        return MessageResponse(
-            message_id=message["message_id"],
-            conversation_id=message["conversation_id"],
-            content=message["content"],
-            role=message["role"],
-            timestamp=message["timestamp"],
-            metadata=message.get("metadata")
-        )
-        
-    except Exception as e:
-        logger.error(f"Failed to add message to conversation {conversation_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    
+    del conversations_db[conversation_id]
+    
+    logger.info(f"Deleted conversation {conversation_id}")
+    
+    return {"status": "deleted"}
 
 
-@router.get("/{conversation_id}/messages", response_model=List[MessageResponse])
-async def get_messages(
+@router.post("/{conversation_id}/messages", response_model=Conversation)
+async def add_message(
     conversation_id: str,
-    limit: Optional[int] = 100,
-    offset: Optional[int] = 0
+    request: MessageAddRequest,
 ):
-    """Get messages from a conversation."""
-    try:
-        messages = await conversation_service.get_messages(
-            conversation_id=conversation_id,
-            limit=limit,
-            offset=offset
+    """Add a message to a conversation."""
+    if conversation_id not in conversations_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Conversation '{conversation_id}' not found",
         )
-        
-        return [
-            MessageResponse(
-                message_id=msg["message_id"],
-                conversation_id=msg["conversation_id"],
-                content=msg["content"],
-                role=msg["role"],
-                timestamp=msg["timestamp"],
-                metadata=msg.get("metadata")
-            )
-            for msg in messages
-        ]
-        
-    except Exception as e:
-        logger.error(f"Failed to get messages from conversation {conversation_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# Summary Management Endpoints
-@router.post("/{conversation_id}/summary", response_model=SummaryResponse)
-async def generate_summary(conversation_id: str, request: SummaryRequest):
-    """Generate a summary for a conversation."""
-    try:
-        summary = await conversation_service.generate_summary(
-            conversation_id=conversation_id,
-            max_length=request.max_length or settings.SUMMARY_MAX_SIZE,
-            compression_ratio=request.compression_ratio or settings.SUMMARY_COMPRESSION_RATIO
-        )
-        
-        return SummaryResponse(
-            conversation_id=summary["conversation_id"],
-            summary=summary["summary"],
-            original_length=summary["original_length"],
-            summary_length=summary["summary_length"],
-            compression_ratio=summary["compression_ratio"],
-            generated_at=summary["generated_at"]
-        )
-        
-    except Exception as e:
-        logger.error(f"Failed to generate summary for conversation {conversation_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/{conversation_id}/summary", response_model=SummaryResponse)
-async def get_summary(conversation_id: str):
-    """Get the summary for a conversation."""
-    try:
-        summary = await conversation_service.get_summary(conversation_id)
-        
-        if not summary:
-            raise HTTPException(status_code=404, detail="Summary not found")
-        
-        return SummaryResponse(
-            conversation_id=summary["conversation_id"],
-            summary=summary["summary"],
-            original_length=summary["original_length"],
-            summary_length=summary["summary_length"],
-            compression_ratio=summary["compression_ratio"],
-            generated_at=summary["generated_at"]
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get summary for conversation {conversation_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# Memory Management Endpoints
-@router.get("/memory/status")
-async def get_memory_status():
-    """Get memory usage status."""
-    try:
-        status = await conversation_service.get_memory_status()
-        return status
-    except Exception as e:
-        logger.error(f"Failed to get memory status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/memory/cleanup")
-async def cleanup_memory():
-    """Clean up old conversations and summaries."""
-    try:
-        result = await conversation_service.cleanup_memory()
-        return {
-            "message": "Memory cleanup completed",
-            "deleted_conversations": result.get("deleted_conversations", 0),
-            "deleted_summaries": result.get("deleted_summaries", 0),
-            "freed_space": result.get("freed_space", 0)
-        }
-    except Exception as e:
-        logger.error(f"Failed to cleanup memory: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/memory/export")
-async def export_memory():
-    """Export all conversations and summaries."""
-    try:
-        export_data = await conversation_service.export_memory()
-        return {
-            "export_timestamp": datetime.utcnow(),
-            "conversations_count": len(export_data["conversations"]),
-            "summaries_count": len(export_data["summaries"]),
-            "data": export_data
-        }
-    except Exception as e:
-        logger.error(f"Failed to export memory: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/memory/import")
-async def import_memory(export_data: Dict[str, Any]):
-    """Import conversations and summaries."""
-    try:
-        result = await conversation_service.import_memory(export_data)
-        return {
-            "message": "Memory import completed",
-            "imported_conversations": result.get("imported_conversations", 0),
-            "imported_summaries": result.get("imported_summaries", 0)
-        }
-    except Exception as e:
-        logger.error(f"Failed to import memory: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    
+    conversation = conversations_db[conversation_id]
+    conversation.messages.append(request.message.dict())
+    
+    # In a real app, update the updated_at timestamp
+    conversation.updated_at = "2023-01-01T00:00:00Z"
+    
+    logger.info(f"Added message to conversation {conversation_id}")
+    
+    return conversation
