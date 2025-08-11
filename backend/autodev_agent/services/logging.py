@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Any
 
-from python_json_logger import jsonlogger
+from pythonjsonlogger.json import JsonFormatter
 
 from ..config import settings
 
@@ -34,7 +34,7 @@ def setup_logging():
         "disable_existing_loggers": False,
         "formatters": {
             "json": {
-                "()": jsonlogger.JsonFormatter,
+                "()": JsonFormatter,
                 "fmt": json_format,
             },
             "human": {

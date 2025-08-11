@@ -110,7 +110,7 @@ Generate thorough tests that validate solution quality and reliability."""
         """Generate the tests."""
         # In a real implementation, this would call an AI model
         # For now, return a placeholder test suite
-        return """
+        return
 # Test Suite
 
 ## Unit Tests
