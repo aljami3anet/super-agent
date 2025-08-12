@@ -1,57 +1,40 @@
+```mermaid
 graph TB
-    %% ── Sub‑graphs (id + title) ─────────────────────────────
-    subgraph FRONTEND["Frontend (React + TypeScript + Tailwind)"]
+    subgraph "Frontend (React + TypeScript)"
         UI[User Interface]
         WS[WebSocket Client]
-        THEME[Theme Provider]
     end
-
-    subgraph BACKEND["Backend (Python 3.11 + FastAPI)"]
+    
+    subgraph "Backend (Python 3.11 + FastAPI)"
         API[FastAPI Server]
-        ORCH[Agent Orchestrator]          %% renamed from AGENTS
+        AGENTS[Agent Orchestrator]
         TOOLS[Tool Functions]
-        DB[(PostgreSQL)]                  %% cylinder shape for a DB
-        REDIS[(Redis)]                    %% cylinder shape for Redis
+        DB[(PostgreSQL)]
     end
-
-    subgraph AGENT_CLUSTER["Agents"]
+    
+    subgraph "Agents"
         PLANNER[Planner Agent]
         CODER[Coder Agent]
         CRITIC[Critic Agent]
         TESTER[Tester Agent]
         SUMMARIZER[Summarizer Agent]
     end
-
-    subgraph OBSERV["Observability"]
-        OTEL[OpenTelemetry Collector]
-        PROM[Prometheus]
-        GRAFANA[Grafana]
-        JAEGER[Jaeger]
-    end
-
-    subgraph EXT_SERVICES["External Services"]
+    
+    subgraph "External Services"
         OPENROUTER[OpenRouter API]
-        GITHUB[GitHub]
+        OTEL[OpenTelemetry]
     end
-
-    %% ── Connections ───────────────────────────────────────────────
+    
     UI --> WS
     WS --> API
-    THEME --> UI
-
-    API --> ORCH
-    ORCH --> PLANNER
-    ORCH --> CODER
-    ORCH --> CRITIC
-    ORCH --> TESTER
-    ORCH --> SUMMARIZER
-    ORCH --> TOOLS
+    API --> AGENTS
+    AGENTS --> PLANNER
+    AGENTS --> CODER
+    AGENTS --> CRITIC
+    AGENTS --> TESTER
+    AGENTS --> SUMMARIZER
+    AGENTS --> TOOLS
     TOOLS --> DB
-    TOOLS --> REDIS
-    TOOLS --> GITHUB
-    ORCH --> OPENROUTER
-
+    AGENTS --> OPENROUTER
     API --> OTEL
-    OTEL --> PROM
-    OTEL --> JAEGER
-    PROM --> GRAFANA
+```
