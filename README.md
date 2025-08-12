@@ -25,6 +25,7 @@ An autonomous AI coding agent system with multi-agent orchestration, real-time c
 ## 🏗️ Architecture
 
 ```mermaid
+
 graph TB
     subgraph "Frontend (React + TypeScript + Tailwind)"
         UI[User Interface]
@@ -78,6 +79,7 @@ graph TB
     OTEL --> PROM
     OTEL --> JAEGER
     PROM --> GRAFANA
+
 ```
 
 ## 📋 Quick Start
