@@ -62,7 +62,6 @@ graph TB
     UI --> WS
     WS --> API
     THEME --> UI
-
     API --> ORCH
     ORCH --> PLANNER
     ORCH --> CODER
@@ -74,7 +73,6 @@ graph TB
     TOOLS --> REDIS
     TOOLS --> GITHUB
     ORCH --> OPENROUTER
-
     API --> OTEL
     OTEL --> PROM
     OTEL --> JAEGER
