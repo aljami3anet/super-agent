@@ -25,7 +25,6 @@ An autonomous AI coding agent system with multi-agent orchestration, real-time c
 ## 🏗️ Architecture
 
 graph TB
-    %% ── Sub‑graphs (id + title) ─────────────────────────────
     subgraph FRONTEND["Frontend (React + TypeScript + Tailwind)"]
         UI[User Interface]
         WS[WebSocket Client]
