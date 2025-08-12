@@ -1,6 +1,5 @@
 # AI Coder Agent
 
-[![CI](https://github.com/ai-coder-agent/ai-coder-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-coder-agent/ai-coder-agent/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/ai-coder-agent/ai-coder-agent/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-coder-agent/ai-coder-agent)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
