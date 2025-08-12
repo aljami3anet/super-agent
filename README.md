@@ -23,6 +23,7 @@ An autonomous AI coding agent system with multi-agent orchestration, real-time c
 - **Production Ready**: Docker deployment, CI/CD pipelines, and comprehensive documentation
 
 ## 🏗️ Architecture
+
 ```mermaid
 graph TB
     subgraph FRONTEND["Frontend (React + TypeScript + Tailwind)"]
@@ -78,6 +79,7 @@ graph TB
     OTEL --> JAEGER
     PROM --> GRAFANA
 ```
+
 ## 📋 Quick Start
 
 ### Prerequisites
