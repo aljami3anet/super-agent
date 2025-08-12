@@ -26,58 +26,58 @@ An autonomous AI coding agent system with multi-agent orchestration, real-time c
 
 ```mermaid
 graph TB
-    subgraph "Frontend (React + TypeScript + Tailwind)"
-        UI[User Interface]
-        WS[WebSocket Client]
-        THEME[Theme Provider]
-    end
+subgraph "Frontend (React + TypeScript + Tailwind)"
+    UI[User Interface]
+    WS[WebSocket Client]
+    THEME[Theme Provider]
+end
 
-    subgraph "Backend (Python 3.11 + FastAPI)"
-        API[FastAPI Server]
-        AGENTS[Agent Orchestrator]
-        TOOLS[Tool Functions]
-        DB[(PostgreSQL)]
-        REDIS[(Redis)]
-    end
+subgraph "Backend (Python 3.11 + FastAPI)"
+    API[FastAPI Server]
+    AGENTS[Agent Orchestrator]
+    TOOLS[Tool Functions]
+    DB[(PostgreSQL)]
+    REDIS[(Redis)]
+end
 
-    subgraph "Agents"
-        PLANNER[Planner Agent]
-        CODER[Coder Agent]
-        CRITIC[Critic Agent]
-        TESTER[Tester Agent]
-        SUMMARIZER[Summarizer Agent]
-    end
+subgraph "Agents"
+    PLANNER[Planner Agent]
+    CODER[Coder Agent]
+    CRITIC[Critic Agent]
+    TESTER[Tester Agent]
+    SUMMARIZER[Summarizer Agent]
+end
 
-    subgraph "Observability"
-        OTEL[OpenTelemetry Collector]
-        PROM[Prometheus]
-        GRAFANA[Grafana]
-        JAEGER[Jaeger]
-    end
+subgraph "Observability"
+    OTEL[OpenTelemetry Collector]
+    PROM[Prometheus]
+    GRAFANA[Grafana]
+    JAEGER[Jaeger]
+end
 
-    subgraph "External Services"
-        OPENROUTER[OpenRouter API]
-        GITHUB[GitHub]
-    end
+subgraph "External Services"
+    OPENROUTER[OpenRouter API]
+    GITHUB[GitHub]
+end
 
-    UI --> WS
-    WS --> API
-    THEME --> UI
-    API --> AGENTS
-    AGENTS --> PLANNER
-    AGENTS --> CODER
-    AGENTS --> CRITIC
-    AGENTS --> TESTER
-    AGENTS --> SUMMARIZER
-    AGENTS --> TOOLS
-    TOOLS --> DB
-    TOOLS --> REDIS
-    TOOLS --> GITHUB
-    AGENTS --> OPENROUTER
-    API --> OTEL
-    OTEL --> PROM
-    OTEL --> JAEGER
-    PROM --> GRAFANA
+UI --> WS
+WS --> API
+THEME --> UI
+API --> AGENTS
+AGENTS --> PLANNER
+AGENTS --> CODER
+AGENTS --> CRITIC
+AGENTS --> TESTER
+AGENTS --> SUMMARIZER
+AGENTS --> TOOLS
+TOOLS --> DB
+TOOLS --> REDIS
+TOOLS --> GITHUB
+AGENTS --> OPENROUTER
+API --> OTEL
+OTEL --> PROM
+OTEL --> JAEGER
+PROM --> GRAFANA
 ```
 
 ## 📋 Quick Start
